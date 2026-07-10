@@ -1,28 +1,39 @@
-## Parent image
+# Parent image
 FROM python:3.10-slim
 
-## Essential environment variables
+# Environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=600
 
-## Work directory inside the docker container
+# Working directory
 WORKDIR /app
 
-## Installing system dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
+    gcc \
+    g++ \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-## Copying all contents from local to container
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Copy requirements first (better Docker layer caching)
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --default-timeout=600 --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
 COPY . .
 
-## Install Python dependencies
-RUN pip install --no-cache-dir -e .
+# Install local package (requires setup.py or pyproject.toml)
+RUN pip install --default-timeout=600 --no-cache-dir -e .
 
-## Expose only flask port
+# Expose Flask port
 EXPOSE 5000
 
-## Run the Flask app
+# Start application
 CMD ["python", "app/application.py"]
-
